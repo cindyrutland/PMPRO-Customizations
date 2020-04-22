@@ -1,0 +1,98 @@
+<?php
+/*
+Plugin Name: PMPro Customizations
+Plugin URI: https://www.paidmembershipspro.com/wp/pmpro-customizations/
+Description: Customizations for my Paid Memberships Pro Setup
+Version: .1
+Author: Paid Memberships Pro
+Author URI: https://www.paidmembershipspro.com
+*/
+ 
+//Now start placing your customization code below this line
+
+
+
+//Add the member's level ID to the BODY class.
+function add_pmpro_level_id_to_body_class( $classes ) {
+	global $current_user;
+	if( function_exists( 'pmpro_hasMembershipLevel' ) && pmpro_hasMembershipLevel() ) {
+		$classes[] = 'pmpro-body-has-level-' . $current_user->membership_level->ID;
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'add_pmpro_level_id_to_body_class' );
+
+
+/*
+	Sync PMPro fields to BuddyPress profile fields.
+*/
+function pmprobuddy_update_user_meta($meta_id, $object_id, $meta_key, $meta_value)
+{		
+	//make sure buddypress is loaded
+	//do_action('bp_init');
+
+	//array of user meta to mirror
+	$um = array(
+		"country" => "Country",             		//usermeta field => buddypress profile field
+		"state" => "State or Province",             		//usermeta field => buddypress profile field
+		"city" => "City",             		//usermeta field => buddypress profile field
+		"personal_introduction" => "Introduction",				//usermeta field => buddypress profile field
+		//professional information for relief veterinarians only
+		/*"experience" => "Experience",				//usermeta field => buddypress profile field
+		"relief_experience" => "Relief Experience",				//usermeta field => buddypress profile field
+		"travel" => "Willingness to Travel",				//usermeta field => buddypress profile field
+		"academic_information" => "Academic Degrees, Schools, and Dates",	     //usermeta field => buddypress profile field*/
+		"professional_associations"  => "Professional Associations",	     //usermeta field => buddypress profile field
+		"website_url" => "Website",
+		"practice_type" => "Practice Type",	     //usermeta field => buddypress profile field
+		"practice_scope" => "Scope of Practice",	     //usermeta field => buddypress profile field
+		"license_numbers" => "License Numbers",	     //usermeta field => buddypress profile field
+		//veterinary practice information only
+		/*"practice_information" => "Practice Type",  
+		"species" => "Species",             		//usermeta field => buddypress profile field
+		"specialties" => "Specialties",			//usermeta field => buddypress profile field		
+		"hours" => "Hours",             		//usermeta field => buddypress profile field
+		"practice_description" => "Detailed Description of Practice",			//usermeta field => buddypress profile field*/	
+		
+
+	);		
+		
+	//check if this user meta is to be mirrored
+	foreach($um as $left => $right)
+	{
+		if($meta_key == $left)
+		{			
+			//find the buddypress field
+			$field = xprofile_get_field_id_from_name($right);
+			
+			//update it
+			if(!empty($field))
+				xprofile_set_field_data($field, $object_id, $meta_value);
+		}
+	}
+}
+add_action('update_user_meta', 'pmprobuddy_update_user_meta', 10, 4);
+//need to add the meta_id for add filter
+function pmprobuddy_add_user_meta($object_id, $meta_key, $meta_value)
+{
+	pmprobuddy_update_user_meta(NULL, $object_id, $meta_key, $meta_value);
+}
+add_action('add_user_meta', 'pmprobuddy_add_user_meta', 10, 3);
+
+
+//create super admin user level in PMPro so admins can view all levels
+
+/*
+  Give level 3 members access to everything.
+  Add this to your active theme's functions.php or a custom plugin.
+*/
+function my_pmpro_has_membership_access_filter($access, $post, $user)
+{
+	if(!empty($user->membership_level) && $user->membership_level->ID == 3)
+		return true;	//level 3 ALWAYS has access
+		
+	return $access;
+}
+add_filter("pmpro_has_membership_access_filter", "my_pmpro_has_membership_access_filter", 10, 3);
+
+
